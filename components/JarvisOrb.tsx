@@ -29,10 +29,15 @@ export default function JarvisOrb() {
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
-  // Wake-word mode
-  const wakeWordModeRef = useRef(true);
-  const commandModeRef = useRef(false);
-  const restartingRecognitionRef = useRef(false);
+  /*
+   * VOICE SYSTEM
+   */
+  const voiceEnabledRef = useRef(true);
+  const wakeWordActiveRef = useRef(true);
+  const commandActiveRef = useRef(false);
+  const recognitionRunningRef = useRef(false);
+  const restartingRef = useRef(false);
+  const destroyedRef = useRef(false);
 
   const [camera, setCamera] = useState<CameraState>("off");
 
@@ -62,11 +67,18 @@ export default function JarvisOrb() {
     sceneRef.current = scene;
 
     return () => {
+      destroyedRef.current = true;
+      voiceEnabledRef.current = false;
+      wakeWordActiveRef.current = false;
+      commandActiveRef.current = false;
+
       trackerRef.current?.stop();
       trackerRef.current = null;
 
-      recognitionRef.current?.stop();
+      recognitionRef.current?.abort();
       recognitionRef.current = null;
+
+      window.speechSynthesis?.cancel();
 
       scene.dispose();
       sceneRef.current = null;
@@ -110,6 +122,18 @@ export default function JarvisOrb() {
       setBrainState("speaking");
 
       /*
+       * Stop recognition while ULTRON speaks.
+       *
+       * This prevents ULTRON from hearing
+       * its own voice and triggering itself.
+       */
+      commandActiveRef.current = false;
+      wakeWordActiveRef.current = false;
+
+      recognitionRef.current?.abort();
+      recognitionRunningRef.current = false;
+
+      /*
        * TEXT TO SPEECH
        */
       if ("speechSynthesis" in window) {
@@ -123,29 +147,60 @@ export default function JarvisOrb() {
         utterance.volume = 1;
 
         utterance.onend = () => {
+          if (destroyedRef.current) return;
+
           setBrainState("idle");
-
-          // Return to wake-word listening
-          commandModeRef.current = false;
-          wakeWordModeRef.current = true;
-
           setTranscript("");
 
+          /*
+           * Return to wake-word mode.
+           */
+          wakeWordActiveRef.current = true;
+          commandActiveRef.current = false;
+
           setTimeout(() => {
-            startWakeWordListening();
-          }, 500);
+            if (
+              voiceEnabledRef.current &&
+              !destroyedRef.current
+            ) {
+              startWakeWordListening();
+            }
+          }, 700);
+        };
+
+        utterance.onerror = () => {
+          if (destroyedRef.current) return;
+
+          setBrainState("idle");
+
+          wakeWordActiveRef.current = true;
+          commandActiveRef.current = false;
+
+          setTimeout(() => {
+            if (
+              voiceEnabledRef.current &&
+              !destroyedRef.current
+            ) {
+              startWakeWordListening();
+            }
+          }, 700);
         };
 
         window.speechSynthesis.speak(utterance);
       } else {
         setBrainState("idle");
 
-        commandModeRef.current = false;
-        wakeWordModeRef.current = true;
+        wakeWordActiveRef.current = true;
+        commandActiveRef.current = false;
 
         setTimeout(() => {
-          startWakeWordListening();
-        }, 500);
+          if (
+            voiceEnabledRef.current &&
+            !destroyedRef.current
+          ) {
+            startWakeWordListening();
+          }
+        }, 700);
       }
     } catch (err) {
       console.error("Gemini request failed:", err);
@@ -153,19 +208,32 @@ export default function JarvisOrb() {
       setBrainState("error");
       setResponse("Gemini connection failed.");
 
-      commandModeRef.current = false;
-      wakeWordModeRef.current = true;
+      commandActiveRef.current = false;
+      wakeWordActiveRef.current = false;
+
+      recognitionRef.current?.abort();
+      recognitionRunningRef.current = false;
 
       setTimeout(() => {
-        setBrainState("idle");
+        if (destroyedRef.current) return;
 
-        startWakeWordListening();
+        setBrainState("idle");
+        setTranscript("");
+
+        wakeWordActiveRef.current = true;
+
+        if (voiceEnabledRef.current) {
+          startWakeWordListening();
+        }
       }, 2500);
     }
   }, []);
 
   /*
    * COMMAND LISTENER
+   *
+   * After "HEY ULTRON" is detected,
+   * this listens for the actual question.
    */
   const startCommandListening = useCallback(() => {
     const SpeechRecognition =
@@ -179,18 +247,24 @@ export default function JarvisOrb() {
       return;
     }
 
-    recognitionRef.current?.stop();
+    if (destroyedRef.current) return;
+
+    commandActiveRef.current = true;
+    wakeWordActiveRef.current = false;
+
+    recognitionRef.current?.abort();
+    recognitionRunningRef.current = false;
 
     const recognition = new SpeechRecognition();
 
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.lang = "en-US";
-
-    commandModeRef.current = true;
-    wakeWordModeRef.current = false;
+    recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
+      recognitionRunningRef.current = true;
+
       setBrainState("listening");
       setTranscript("");
       setError(null);
@@ -215,43 +289,100 @@ export default function JarvisOrb() {
       }
 
       if (finalText.trim()) {
-        setTranscript(finalText);
+        const command = finalText.trim();
 
-        commandModeRef.current = false;
+        setTranscript(command);
 
-        void askGemini(finalText);
+        commandActiveRef.current = false;
+
+        recognition.stop();
+
+        void askGemini(command);
       }
     };
 
     recognition.onerror = (event) => {
-      console.error(
-        "Command recognition error:",
+      console.log(
+        "Command recognition:",
         event.error
       );
 
-      commandModeRef.current = false;
+      recognitionRunningRef.current = false;
 
       if (event.error === "not-allowed") {
         setError("MICROPHONE ACCESS DENIED");
         setBrainState("error");
+
+        voiceEnabledRef.current = false;
         return;
       }
+
+      if (
+        event.error === "no-speech" ||
+        event.error === "aborted"
+      ) {
+        commandActiveRef.current = false;
+        wakeWordActiveRef.current = true;
+
+        setBrainState("idle");
+        setTranscript("");
+
+        setTimeout(() => {
+          if (
+            voiceEnabledRef.current &&
+            !destroyedRef.current
+          ) {
+            startWakeWordListening();
+          }
+        }, 700);
+
+        return;
+      }
+
+      commandActiveRef.current = false;
+      wakeWordActiveRef.current = true;
 
       setBrainState("idle");
 
       setTimeout(() => {
-        startWakeWordListening();
-      }, 500);
+        if (
+          voiceEnabledRef.current &&
+          !destroyedRef.current
+        ) {
+          startWakeWordListening();
+        }
+      }, 700);
     };
 
     recognition.onend = () => {
-      if (commandModeRef.current) {
-        commandModeRef.current = false;
+      recognitionRunningRef.current = false;
 
-        setTimeout(() => {
-          startWakeWordListening();
-        }, 500);
+      /*
+       * If a command was successfully received,
+       * Gemini is handling it.
+       */
+      if (!commandActiveRef.current) {
+        return;
       }
+
+      /*
+       * If the user didn't say anything,
+       * return to wake-word mode.
+       */
+      commandActiveRef.current = false;
+      wakeWordActiveRef.current = true;
+
+      setBrainState("idle");
+      setTranscript("");
+
+      setTimeout(() => {
+        if (
+          voiceEnabledRef.current &&
+          !destroyedRef.current
+        ) {
+          startWakeWordListening();
+        }
+      }, 700);
     };
 
     recognitionRef.current = recognition;
@@ -259,15 +390,25 @@ export default function JarvisOrb() {
     try {
       recognition.start();
     } catch (err) {
-      console.error(
-        "Command recognition start failed:",
+      console.log(
+        "Command recognition start:",
         err
       );
+
+      recognitionRunningRef.current = false;
     }
   }, [askGemini]);
 
   /*
    * WAKE WORD LISTENER
+   *
+   * IMPORTANT:
+   *
+   * We use ONE continuous recognition session.
+   *
+   * We do NOT repeatedly create a new
+   * SpeechRecognition object every time
+   * no-speech occurs.
    */
   const startWakeWordListening =
     useCallback(() => {
@@ -282,25 +423,47 @@ export default function JarvisOrb() {
         return;
       }
 
-      // Don't start another recognition session
-      if (restartingRecognitionRef.current) {
+      if (
+        destroyedRef.current ||
+        !voiceEnabledRef.current ||
+        commandActiveRef.current
+      ) {
         return;
       }
 
-      recognitionRef.current?.stop();
+      /*
+       * Don't start another listener if one
+       * is already running.
+       */
+      if (recognitionRunningRef.current) {
+        return;
+      }
+
+      wakeWordActiveRef.current = true;
+      commandActiveRef.current = false;
 
       const recognition = new SpeechRecognition();
 
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = "en-US";
+      /*
+       * KEY CHANGE:
+       *
+       * Keep the wake listener continuous.
+       */
+      recognition.continuous = true;
 
-      wakeWordModeRef.current = true;
-      commandModeRef.current = false;
+      /*
+       * We need interim results so the wake word
+       * can be detected quickly.
+       */
+      recognition.interimResults = true;
+
+      recognition.lang = "en-US";
+      recognition.maxAlternatives = 1;
 
       recognition.onstart = () => {
+        recognitionRunningRef.current = true;
+
         setBrainState("idle");
-        setTranscript("");
         setError(null);
       };
 
@@ -321,57 +484,89 @@ export default function JarvisOrb() {
           .trim()
           .toLowerCase();
 
+        if (!heardText) return;
+
         console.log(
-          "ULTRON wake listener heard:",
+          "ULTRON heard:",
           heardText
         );
 
         /*
-         * Detect:
+         * Accept:
          *
          * hey ultron
          * hey, ultron
-         * hey ultra
          * hey ultra n
+         * hey ultra
+         *
+         * The looser matching helps when
+         * Chrome transcribes "Ultron" imperfectly.
          */
         const wakeWord =
-          /\bhey\s+(ultron|ultra\s*n)\b/i;
+          /\bhey[\s,.-]*(ultron|ultra[\s-]*n|ultra)\b/i;
 
-        if (wakeWord.test(heardText)) {
-          console.log(
-            "ULTRON WAKE WORD DETECTED"
-          );
-
-          wakeWordModeRef.current = false;
-
-          setTranscript("HEY ULTRON");
-          setBrainState("listening");
-
-          recognition.stop();
-
-          // Now listen for the actual command
-          setTimeout(() => {
-            startCommandListening();
-          }, 250);
+        if (!wakeWord.test(heardText)) {
+          return;
         }
+
+        console.log(
+          "========== ULTRON WAKE WORD DETECTED =========="
+        );
+
+        /*
+         * Switch from wake-word mode to
+         * command mode.
+         */
+        wakeWordActiveRef.current = false;
+        commandActiveRef.current = true;
+
+        setTranscript("HEY ULTRON");
+        setBrainState("listening");
+
+        /*
+         * Stop the continuous wake listener.
+         */
+        recognition.stop();
+
+        recognitionRunningRef.current = false;
+
+        /*
+         * Give the browser a moment to close
+         * the old recognition session before
+         * opening the command listener.
+         */
+        setTimeout(() => {
+          if (
+            !destroyedRef.current &&
+            voiceEnabledRef.current &&
+            commandActiveRef.current
+          ) {
+            startCommandListening();
+          }
+        }, 350);
       };
 
       recognition.onerror = (event) => {
         console.log(
-          "Wake word listener:",
+          "Wake word recognition:",
           event.error
         );
+
+        recognitionRunningRef.current = false;
 
         if (event.error === "not-allowed") {
           setError("MICROPHONE ACCESS DENIED");
           setBrainState("error");
+
+          voiceEnabledRef.current = false;
           return;
         }
 
         /*
-         * no-speech is normal.
-         * Chrome stops recognition when nothing
-         * is heard, so simply restart it.
+         * These are normal browser events.
+         *
+         * We don't immediately create another
+         * recognition instance here.
          */
         if (
           event.error === "no-speech" ||
@@ -381,24 +576,47 @@ export default function JarvisOrb() {
         }
 
         setTimeout(() => {
-          startWakeWordListening();
-        }, 500);
+          if (
+            voiceEnabledRef.current &&
+            wakeWordActiveRef.current &&
+            !destroyedRef.current
+          ) {
+            startWakeWordListening();
+          }
+        }, 1000);
       };
 
       recognition.onend = () => {
+        recognitionRunningRef.current = false;
+
+        /*
+         * If wake mode is still active, restart
+         * only after the service actually ended.
+         *
+         * This prevents multiple recognition
+         * instances from fighting each other.
+         */
         if (
-          wakeWordModeRef.current &&
-          !commandModeRef.current
+          voiceEnabledRef.current &&
+          wakeWordActiveRef.current &&
+          !commandActiveRef.current &&
+          !destroyedRef.current &&
+          !restartingRef.current
         ) {
-          restartingRecognitionRef.current =
-            true;
+          restartingRef.current = true;
 
           setTimeout(() => {
-            restartingRecognitionRef.current =
-              false;
+            restartingRef.current = false;
 
-            startWakeWordListening();
-          }, 300);
+            if (
+              voiceEnabledRef.current &&
+              wakeWordActiveRef.current &&
+              !commandActiveRef.current &&
+              !destroyedRef.current
+            ) {
+              startWakeWordListening();
+            }
+          }, 800);
         }
       };
 
@@ -408,15 +626,23 @@ export default function JarvisOrb() {
         recognition.start();
       } catch (err) {
         console.log(
-          "Wake word recognition already running."
+          "Wake recognition start:",
+          err
         );
+
+        recognitionRunningRef.current = false;
       }
     }, [startCommandListening]);
 
   /*
-   * START WAKE WORD SYSTEM AUTOMATICALLY
+   * START WAKE WORD SYSTEM
    */
   useEffect(() => {
+    destroyedRef.current = false;
+    voiceEnabledRef.current = true;
+    wakeWordActiveRef.current = true;
+    commandActiveRef.current = false;
+
     const timer = setTimeout(() => {
       startWakeWordListening();
     }, 1000);
@@ -424,15 +650,25 @@ export default function JarvisOrb() {
     return () => {
       clearTimeout(timer);
 
-      wakeWordModeRef.current = false;
-      commandModeRef.current = false;
+      destroyedRef.current = true;
 
-      recognitionRef.current?.stop();
+      voiceEnabledRef.current = false;
+      wakeWordActiveRef.current = false;
+      commandActiveRef.current = false;
+
+      recognitionRef.current?.abort();
+      recognitionRef.current = null;
+
+      recognitionRunningRef.current = false;
+
+      window.speechSynthesis?.cancel();
     };
   }, [startWakeWordListening]);
 
   /*
    * MANUAL VOICE TOGGLE
+   *
+   * V key / button still works.
    */
   const toggleVoice = useCallback(() => {
     if (
@@ -440,10 +676,14 @@ export default function JarvisOrb() {
       brainState === "thinking" ||
       brainState === "speaking"
     ) {
-      wakeWordModeRef.current = false;
-      commandModeRef.current = false;
+      voiceEnabledRef.current = false;
+      wakeWordActiveRef.current = false;
+      commandActiveRef.current = false;
 
-      recognitionRef.current?.stop();
+      recognitionRef.current?.abort();
+      recognitionRef.current = null;
+
+      recognitionRunningRef.current = false;
 
       window.speechSynthesis?.cancel();
 
@@ -453,8 +693,11 @@ export default function JarvisOrb() {
       return;
     }
 
-    wakeWordModeRef.current = true;
-    commandModeRef.current = false;
+    voiceEnabledRef.current = true;
+    wakeWordActiveRef.current = true;
+    commandActiveRef.current = false;
+
+    setError(null);
 
     startWakeWordListening();
   }, [brainState, startWakeWordListening]);
@@ -733,17 +976,16 @@ export default function JarvisOrb() {
           </div>
         )}
 
-        {/* VOICE BUTTON */}
+        {/* VOICE */}
         <div className="hud-row">
           <button
             type="button"
             className="hud-btn"
             onClick={toggleVoice}
           >
-            {brainState ===
-            "listening"
-              ? "STOP LISTENING"
-              : "VOICE ACTIVE"}
+            {voiceEnabledRef.current
+              ? "VOICE ACTIVE"
+              : "VOICE OFF"}
           </button>
         </div>
 
