@@ -15,8 +15,7 @@ export interface OrbSceneApi {
   resetView(): void;
   dispose(): void;
 }
-
-const HOME_POSITION = new THREE.Vector3(0, 0.5, 5.5);
+const HOME_POSITION = new THREE.Vector3(0, 0.5, 6.4);
 const MIN_DISTANCE = 0.6;
 const MAX_DISTANCE = 40;
 
@@ -94,12 +93,12 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
   controls.zoomSpeed = 1.4;
   controls.enablePan = false;
 
-  // ——— COLORS ———
-  const C_BRIGHT = 0xffaa30;
-  const C_MID = 0xdd7700;
-  const C_DIM = 0x884400;
-  const C_FAINT = 0x553300;
-  const C_HOT = 0xffcc66;
+// ——— COLORS ———
+const C_BRIGHT = 0xff2222;
+const C_MID = 0xcc0000;
+const C_HOT = 0xff4444;
+const C_DIM = 0x660000;
+const C_FAINT = 0x330000;
 
   // ——— ORB ROOT ———
   // Every part of the orb (shells, core, orbiting debris, text, dust, rings)
@@ -434,7 +433,7 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
     const ctx = c.getContext("2d")!;
     ctx.font = "bold 14px Courier New";
     const alpha = 0.35 + Math.random() * 0.55;
-    ctx.fillStyle = `rgba(255, ${(130 + Math.random() * 80) | 0}, ${(20 + Math.random() * 30) | 0}, ${alpha})`;
+    ctx.fillStyle = `rgba(150, 0, 0, ${alpha})`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(text, 128, 16);

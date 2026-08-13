@@ -29,24 +29,33 @@ body {
   display: block;
 }
 
-/* Film grain overlay */
+/* =========================================
+   FILM GRAIN
+   ========================================= */
+
 .overlay-grain {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 10;
   opacity: 0.06;
+
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
   background-size: 150px;
   mix-blend-mode: screen;
 }
 
-/* Scanline overlay */
+/* =========================================
+   SCANLINES
+   ========================================= */
+
 .overlay-scanlines {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 11;
+
   background: repeating-linear-gradient(
     to bottom,
     transparent 0px,
@@ -54,15 +63,20 @@ body {
     rgba(0, 0, 0, 0.15) 2px,
     rgba(0, 0, 0, 0.15) 4px
   );
+
   opacity: 0.3;
 }
 
-/* Vignette */
+/* =========================================
+   VIGNETTE
+   ========================================= */
+
 .overlay-vignette {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 9;
+
   background: radial-gradient(
     ellipse at center,
     transparent 40%,
@@ -70,61 +84,102 @@ body {
   );
 }
 
-/* ——— HUD ——— */
+/* =========================================
+   HUD
+   ========================================= */
+
 .hud {
   position: fixed;
   z-index: 20;
+
   color: #ffaa30;
+
   font-family: "Courier New", monospace;
+
   user-select: none;
 }
 
+/* =========================================
+   RIGHT SIDE CONTROLS
+   ========================================= */
+
 .hud-controls {
+  position: fixed;
+
   bottom: 24px;
   right: 24px;
+
   display: flex;
   flex-direction: column;
+
   gap: 8px;
+
   align-items: flex-end;
+
+  z-index: 30;
 }
 
 .hud-btn {
   min-width: 44px;
   height: 44px;
+
   padding: 0 12px;
+
   background: rgba(20, 10, 0, 0.55);
+
   border: 1px solid rgba(255, 170, 48, 0.45);
+
   border-radius: 4px;
+
   color: #ffaa30;
+
   font-family: "Courier New", monospace;
+
   font-size: 15px;
+
   font-weight: bold;
+
   letter-spacing: 0.08em;
+
   cursor: pointer;
+
   backdrop-filter: blur(2px);
+
   text-shadow: 0 0 6px rgba(255, 170, 48, 0.7);
-  box-shadow: 0 0 12px rgba(255, 140, 20, 0.12) inset;
+
+  box-shadow:
+    0 0 12px rgba(255, 140, 20, 0.12) inset;
+
   transition:
     background 0.15s ease,
     border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
 }
 
 .hud-btn:hover {
   background: rgba(60, 30, 0, 0.7);
+
   border-color: rgba(255, 200, 100, 0.9);
+
   box-shadow:
     0 0 14px rgba(255, 150, 30, 0.35),
     0 0 12px rgba(255, 140, 20, 0.2) inset;
+
+  transform: translateY(-1px);
 }
 
 .hud-btn:active {
   background: rgba(90, 45, 0, 0.8);
+
+  transform: translateY(0);
 }
 
 .hud-btn[aria-pressed="true"] {
   background: rgba(120, 60, 0, 0.6);
+
   border-color: #ffcc66;
+
   color: #ffcc66;
 }
 
@@ -133,63 +188,118 @@ body {
   gap: 8px;
 }
 
+/* =========================================
+   LEFT SIDE HELP
+   ========================================= */
+
 .hud-hint {
   bottom: 24px;
   left: 24px;
+
   font-size: 11px;
+
   line-height: 1.7;
+
   letter-spacing: 0.1em;
+
   opacity: 0.55;
-  text-shadow: 0 0 8px rgba(255, 170, 48, 0.6);
+
+  text-shadow:
+    0 0 8px rgba(255, 170, 48, 0.6);
+
   pointer-events: none;
 }
 
 .hud-hint .key {
   display: inline-block;
+
   padding: 0 4px;
+
   border: 1px solid rgba(255, 170, 48, 0.5);
+
   border-radius: 3px;
+
   margin-right: 4px;
+
   font-size: 10px;
 }
+
+/* =========================================
+   ULTRON TITLE
+   ========================================= */
 
 .hud-title {
   top: 24px;
   left: 24px;
+
   font-size: 13px;
+
   letter-spacing: 0.35em;
+
   opacity: 0.7;
-  text-shadow: 0 0 10px rgba(255, 170, 48, 0.8);
+
+  text-shadow:
+    0 0 10px rgba(255, 170, 48, 0.8);
+
   pointer-events: none;
 }
 
 .hud-title::after {
   content: "";
+
   display: block;
+
   margin-top: 6px;
+
   width: 120px;
+
   height: 1px;
-  background: linear-gradient(to right, rgba(255, 170, 48, 0.8), transparent);
+
+  background:
+    linear-gradient(
+      to right,
+      rgba(255, 170, 48, 0.8),
+      transparent
+    );
 }
+
+/* =========================================
+   ERRORS
+   ========================================= */
 
 .hud-error {
   font-size: 11px;
+
   letter-spacing: 0.15em;
+
   color: #ff5533;
-  text-shadow: 0 0 8px rgba(255, 60, 30, 0.7);
+
+  text-shadow:
+    0 0 8px rgba(255, 60, 30, 0.7);
 }
 
-/* ——— Camera preview panel ——— */
+/* =========================================
+   CAMERA PANEL
+   ========================================= */
+
 .camera-panel {
   position: relative;
+
   width: 208px;
   height: 156px;
+
   display: none;
+
   border: 1px solid rgba(255, 170, 48, 0.45);
+
   border-radius: 4px;
+
   overflow: hidden;
+
   background: #0a0500;
-  box-shadow: 0 0 16px rgba(255, 140, 20, 0.15);
+
+  box-shadow:
+    0 0 16px rgba(255, 140, 20, 0.15);
 }
 
 .camera-panel.visible {
@@ -198,38 +308,427 @@ body {
 
 .camera-video {
   position: absolute;
+
   inset: 0;
+
   width: 100%;
   height: 100%;
+
   object-fit: cover;
-  transform: scaleX(-1); /* mirror so it behaves like a mirror */
-  filter: sepia(1) hue-rotate(-15deg) saturate(2.2) brightness(0.75)
+
+  transform: scaleX(-1);
+
+  filter:
+    sepia(1)
+    hue-rotate(-15deg)
+    saturate(2.2)
+    brightness(0.75)
     contrast(1.15);
+
   opacity: 0.85;
 }
 
 .camera-overlay {
   position: absolute;
+
   inset: 0;
+
   width: 100%;
   height: 100%;
 }
 
 .camera-status {
   position: absolute;
+
   bottom: 0;
   left: 0;
   right: 0;
+
   padding: 3px 6px;
+
   font-size: 10px;
+
   letter-spacing: 0.15em;
+
   color: #ffcc66;
+
   background: rgba(10, 5, 0, 0.65);
-  text-shadow: 0 0 6px rgba(255, 170, 48, 0.8);
+
+  text-shadow:
+    0 0 6px rgba(255, 170, 48, 0.8);
 }
 
-@media (max-width: 600px) {
+/* =========================================
+   CENTER ULTRON ACTIVATION
+   ========================================= */
+
+.ultron-activate {
+  position: fixed;
+
+  left: 50%;
+
+  top: 74%;
+
+  transform: translate(-50%, -50%);
+
+  width: 100%;
+
+  display: flex;
+
+  justify-content: center;
+
+  align-items: center;
+
+  z-index: 50;
+
+  pointer-events: none;
+}
+
+.ultron-activate .activate-btn {
+  pointer-events: auto;
+}
+
+/* =========================================
+   ACTIVATE BUTTON
+   ========================================= */
+
+.activate-btn {
+  position: relative;
+
+  min-width: 230px;
+
+  height: 48px;
+
+  padding: 0 28px;
+
+  border: 1px solid rgba(255, 0, 0, 0.75);
+
+  border-radius: 4px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(30, 0, 0, 0.85),
+      rgba(8, 0, 0, 0.9)
+    );
+
+  color: #ff3030;
+
+  font-family: "Courier New", monospace;
+
+  font-size: 13px;
+
+  font-weight: 700;
+
+  letter-spacing: 3px;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 0 10px rgba(255, 0, 0, 0.25),
+    0 0 25px rgba(255, 0, 0, 0.08),
+    inset 0 0 15px rgba(255, 0, 0, 0.08);
+
+  text-shadow:
+    0 0 8px rgba(255, 0, 0, 0.7);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.activate-btn:hover {
+  transform: scale(1.04);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(80, 0, 0, 0.85),
+      rgba(20, 0, 0, 0.95)
+    );
+
+  border-color: rgba(255, 60, 60, 0.95);
+
+  box-shadow:
+    0 0 20px rgba(255, 0, 0, 0.5),
+    0 0 40px rgba(255, 0, 0, 0.15),
+    inset 0 0 20px rgba(255, 0, 0, 0.15);
+}
+
+.activate-btn:active {
+  transform: scale(0.98);
+}
+
+/* =========================================
+   ACTIVATE BUTTON DOT
+   ========================================= */
+
+.activate-dot {
+  display: inline-block;
+
+  width: 7px;
+  height: 7px;
+
+  margin-right: 10px;
+
+  border-radius: 50%;
+
+  background: #ff2020;
+
+  box-shadow:
+    0 0 10px #ff2020,
+    0 0 20px rgba(255, 0, 0, 0.5);
+}
+
+/* =========================================
+   LISTENING ANIMATION
+   ========================================= */
+
+.activate-btn.active {
+  animation: ultronListening 1s infinite;
+}
+
+.activate-btn.active .activate-dot {
+  animation: activateDotPulse 0.6s infinite;
+}
+
+@keyframes ultronListening {
+  0%,
+  100% {
+    box-shadow:
+      0 0 10px rgba(255, 0, 0, 0.3),
+      0 0 25px rgba(255, 0, 0, 0.08),
+      inset 0 0 10px rgba(255, 0, 0, 0.05);
+  }
+
+  50% {
+    box-shadow:
+      0 0 30px rgba(255, 0, 0, 0.8),
+      0 0 55px rgba(255, 0, 0, 0.2),
+      inset 0 0 25px rgba(255, 0, 0, 0.15);
+  }
+}
+
+@keyframes activateDotPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+
+    transform: scale(0.8);
+  }
+
+  50% {
+    opacity: 1;
+
+    transform: scale(1.4);
+  }
+}
+
+/* =========================================
+   CENTER GEMINI BRAIN
+   ========================================= */
+
+.ultron-brain {
+  position: fixed;
+
+  left: 50%;
+
+  top: 86%;
+
+  transform: translateX(-50%);
+
+  width: min(700px, 80vw);
+
+  z-index: 40;
+
+  text-align: center;
+
+  pointer-events: none;
+
+  font-family: "Courier New", monospace;
+}
+
+/* =========================================
+   BRAIN STATUS
+   ========================================= */
+
+.brain-status {
+  color: #ff3030;
+
+  font-size: 12px;
+
+  letter-spacing: 4px;
+
+  margin-bottom: 10px;
+
+  text-shadow:
+    0 0 8px rgba(255, 0, 0, 0.7);
+}
+
+.brain-dot {
+  display: inline-block;
+
+  width: 6px;
+  height: 6px;
+
+  margin-right: 8px;
+
+  border-radius: 50%;
+
+  background: #ff2020;
+
+  box-shadow:
+    0 0 8px #ff2020,
+    0 0 15px rgba(255, 0, 0, 0.4);
+}
+
+/* =========================================
+   USER TRANSCRIPT
+   ========================================= */
+
+.brain-transcript {
+  color: rgba(255, 255, 255, 0.55);
+
+  font-size: 12px;
+
+  line-height: 1.5;
+
+  margin-bottom: 8px;
+}
+
+.brain-transcript span,
+.brain-response span {
+  color: #ff3030;
+
+  letter-spacing: 2px;
+}
+
+/* =========================================
+   GEMINI RESPONSE
+   ========================================= */
+
+.brain-response {
+  color: rgba(255, 255, 255, 0.9);
+
+  font-size: 14px;
+
+  line-height: 1.6;
+
+  text-shadow:
+    0 0 8px rgba(255, 0, 0, 0.25);
+}
+
+.brain-response p {
+  margin: 5px 0 0;
+}
+
+/* =========================================
+   BRAIN STATES
+   ========================================= */
+
+.brain-listening .brain-dot {
+  animation:
+    brainPulse 0.7s infinite;
+}
+
+.brain-thinking .brain-dot {
+  animation:
+    brainPulse 0.35s infinite;
+}
+
+.brain-speaking .brain-dot {
+  animation:
+    brainPulse 0.5s infinite;
+}
+
+.brain-error .brain-dot {
+  background: #ff5533;
+
+  box-shadow:
+    0 0 10px #ff5533;
+}
+
+@keyframes brainPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+
+    transform: scale(0.8);
+  }
+
+  50% {
+    opacity: 1;
+
+    transform: scale(1.4);
+  }
+}
+
+/* =========================================
+   RESPONSE GLOW
+   ========================================= */
+
+.brain-speaking .brain-response {
+  animation: responseGlow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes responseGlow {
+  from {
+    text-shadow:
+      0 0 6px rgba(255, 0, 0, 0.15);
+  }
+
+  to {
+    text-shadow:
+      0 0 16px rgba(255, 0, 0, 0.45);
+  }
+}
+
+/* =========================================
+   MOBILE
+   ========================================= */
+
+@media (max-width: 700px) {
   .hud-hint {
     display: none;
+  }
+
+  .ultron-activate {
+    top: 70%;
+  }
+
+  .ultron-brain {
+    top: 79%;
+
+    width: 90vw;
+  }
+
+  .activate-btn {
+    min-width: 190px;
+
+    height: 44px;
+
+    font-size: 11px;
+
+    letter-spacing: 2px;
+  }
+
+  .brain-response {
+    font-size: 12px;
+  }
+}
+
+/* =========================================
+   SMALL HEIGHT SCREENS
+   ========================================= */
+
+@media (max-height: 700px) {
+  .ultron-activate {
+    top: 74%;
+  }
+
+  .ultron-brain {
+    top: 83%;
   }
 }
